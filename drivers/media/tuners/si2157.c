@@ -237,6 +237,28 @@ skip_fw_download:
 
 	dev_info(&client->dev, "firmware version: %c.%c.%d\n",
 			cmd.args[6], cmd.args[7], cmd.args[8]);
+
+	/* enable tuner status flags, for si2157_tune_wait() */
+	memcpy(cmd.args, "\x14\x00\x01\x05\x01\x00", 6);
+	cmd.wlen = 6;
+	cmd.rlen = 1;
+	ret = si2157_cmd_execute(client, &cmd);
+	if (ret)
+		goto err;
+
+	memcpy(cmd.args, "\x14\x00\x01\x06\x01\x00", 6);
+	cmd.wlen = 6;
+	cmd.rlen = 1;
+	ret = si2157_cmd_execute(client, &cmd);
+	if (ret)
+		goto err;
+
+	memcpy(cmd.args, "\x14\x00\x01\x07\x01\x00", 6);
+	cmd.wlen = 6;
+	cmd.rlen = 1;
+	ret = si2157_cmd_execute(client, &cmd);
+	if (ret)
+		goto err;
 warm:
 	/* init statistics in order signal app which are supported */
 	c->strength.len = 1;
@@ -277,6 +299,84 @@ static int si2157_sleep(struct dvb_frontend *fe)
 
 	return 0;
 err:
+	dev_dbg(&client->dev, "failed=%d\n", ret);
+	return ret;
+}
+
+static int si2157_tune_wait(struct i2c_client *client, u8 is_digital)
+{
+#define TUN_TIMEOUT 40
+#define DIG_TIMEOUT 30
+#define ANALOG_TIMEOUT 150
+	struct si2157_dev *dev = i2c_get_clientdata(client);
+	int ret;
+	unsigned long timeout;
+	unsigned long start_time;
+	u8 wait_status;
+	u8  tune_lock_mask;
+
+	if (is_digital)
+		tune_lock_mask = 0x04;
+	else
+		tune_lock_mask = 0x02;
+
+	mutex_lock(&dev->i2c_mutex);
+
+	/* wait tuner command complete */
+	start_time = jiffies;
+	timeout = start_time + msecs_to_jiffies(TUN_TIMEOUT);
+	while (!time_after(jiffies, timeout)) {
+		ret = i2c_master_recv(client, &wait_status,
+					sizeof(wait_status));
+		if (ret < 0) {
+			goto err_mutex_unlock;
+		} else if (ret != sizeof(wait_status)) {
+			ret = -EREMOTEIO;
+			goto err_mutex_unlock;
+		}
+
+		/* tuner done? */
+		if ((wait_status & 0x81) == 0x81)
+			break;
+		usleep_range(5000, 10000);
+	}
+	/* if we tuned ok, wait a bit for tuner lock */
+	if ((wait_status & 0x81) == 0x81) {
+		if (is_digital)
+			timeout = jiffies + msecs_to_jiffies(DIG_TIMEOUT);
+		else
+			timeout = jiffies + msecs_to_jiffies(ANALOG_TIMEOUT);
+		while (!time_after(jiffies, timeout)) {
+			ret = i2c_master_recv(client, &wait_status,
+						sizeof(wait_status));
+			if (ret < 0) {
+				goto err_mutex_unlock;
+			} else if (ret != sizeof(wait_status)) {
+				ret = -EREMOTEIO;
+				goto err_mutex_unlock;
+			}
+
+			/* tuner locked? */
+			if (wait_status & tune_lock_mask)
+				break;
+			usleep_range(5000, 10000);
+		}
+	}
+
+	dev_dbg(&client->dev, "tuning took %d ms, status=0x%x\n",
+		jiffies_to_msecs(jiffies) - jiffies_to_msecs(start_time),
+		wait_status);
+
+	if ((wait_status & 0xc0) != 0x80) {
+		ret = -ETIMEDOUT;
+		goto err_mutex_unlock;
+	}
+
+	mutex_unlock(&dev->i2c_mutex);
+	return 0;
+
+err_mutex_unlock:
+	mutex_unlock(&dev->i2c_mutex);
 	dev_dbg(&client->dev, "failed=%d\n", ret);
 	return ret;
 }
@@ -376,6 +476,8 @@ static int si2157_set_params(struct dvb_frontend *fe)
 	ret = si2157_cmd_execute(client, &cmd);
 	if (ret)
 		goto err;
+
+	si2157_tune_wait(client, 1); /* wait to complete, ignore any errors */
 
 	return 0;
 err:
