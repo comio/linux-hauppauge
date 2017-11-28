@@ -2383,6 +2383,16 @@ static int dvb_register(struct cx23885_tsport *port)
 				goto frontend_detach;
 			}
 			port->i2c_client_tuner = client_tuner;
+
+			/* we only attach tuner for analog on the 888 version */
+			if (dev->board == CX23885_BOARD_HAUPPAUGE_QUADHD_DVB) {
+				pr_info("%s(): QUADHD_DVB analog setup\n",
+					__func__);
+				dev->ts1.analog_fe.tuner_priv = client_tuner;
+				dvb_attach(si2157_attach, &dev->ts1.analog_fe,
+					info.addr, &dev->i2c_bus[1].i2c_adap,
+					&si2157_config);
+			}
 			break;
 
 		/* port c - terrestrial/cable */
@@ -2472,6 +2482,16 @@ static int dvb_register(struct cx23885_tsport *port)
 				goto frontend_detach;
 			}
 			port->i2c_client_tuner = client_tuner;
+
+			/* we only attach tuner for analog on the 888 version */
+			if (dev->board == CX23885_BOARD_HAUPPAUGE_QUADHD_ATSC) {
+				pr_info("%s(): QUADHD_ATSC analog setup\n",
+					__func__);
+				dev->ts1.analog_fe.tuner_priv = client_tuner;
+				dvb_attach(si2157_attach, &dev->ts1.analog_fe,
+					info.addr, &dev->i2c_bus[1].i2c_adap,
+					&si2157_config);
+			}
 			break;
 
 		/* port c - terrestrial/cable */
