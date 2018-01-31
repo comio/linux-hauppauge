@@ -80,6 +80,7 @@
 #define CX231XX_BOARD_TERRATEC_GRABBY 22
 #define CX231XX_BOARD_EVROMEDIA_FULL_HYBRID_FULLHD 23
 #define CX231XX_BOARD_ASTROMETA_T2HYBRID 24
+#define CX231XX_BOARD_HAUPPAUGE_935C 26
 
 /* Limits minimum and default number of buffers */
 #define CX231XX_MIN_BUF                 4
