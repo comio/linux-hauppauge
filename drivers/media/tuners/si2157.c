@@ -1,5 +1,5 @@
 /*
- * Silicon Labs Si2146/2147/2148/2157/2158 silicon tuner driver
+ * Silicon Labs Si2141/2146/2147/2148/2157/2158 silicon tuner driver
  *
  * Copyright (C) 2014 Antti Palosaari <crope@iki.fi>
  *
@@ -239,6 +239,23 @@ skip_fw_download:
 	dev_info(&client->dev, "firmware version: %c.%c.%d\n",
 			cmd.args[6], cmd.args[7], cmd.args[8]);
 
+	if (dev->chiptype == SI2157_CHIPTYPE_SI2141) {
+		/* set clock */
+		memcpy(cmd.args, "\xc0\x00\x0d", 3);
+		cmd.wlen = 3;
+		cmd.rlen = 1;
+		ret = si2157_cmd_execute(client, &cmd);
+		if (ret)
+			goto err;
+		/* setup PIN */
+		memcpy(cmd.args, "\x12\x80\x80\x85\x00\x81\x00", 7);
+		cmd.wlen = 7;
+		cmd.rlen = 7;
+		ret = si2157_cmd_execute(client, &cmd);
+		if (ret)
+			goto err;
+	}
+
 	/* enable tuner status flags */
 	memcpy(cmd.args, "\x14\x00\x01\x05\x01\x00", 6);
 	cmd.wlen = 6;
@@ -417,7 +434,7 @@ static int si2157_get_if_frequency(struct dvb_frontend *fe, u32 *frequency)
 
 static const struct dvb_tuner_ops si2157_ops = {
 	.info = {
-		.name           = "Silicon Labs Si2141/Si2146/2147/2148/2157/2158",
+		.name           = "Silicon Labs Si2141/2146/2147/2148/2157/2158",
 		.frequency_min  = 42000000,
 		.frequency_max  = 870000000,
 	},
