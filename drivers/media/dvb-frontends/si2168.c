@@ -668,7 +668,7 @@ static int si2168_sleep(struct dvb_frontend *fe)
 		goto err;
 
 	/* Firmware B 4.0-11 or later loses warm state during sleep */
-	if (dev->version > ('B' << 24 | 4 << 16 | 0 << 8 | 11 << 0))
+	if (dev->version >= ('B' << 24 | 4 << 16 | 0 << 8 | 11 << 0))
 		dev->warm = false;
 
 	memcpy(cmd.args, "\x13", 1);
