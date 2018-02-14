@@ -279,7 +279,7 @@ warm:
 	c->strength.len = 1;
 	c->strength.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
 	/* start statistics polling */
-	schedule_delayed_work(&dev->stat_work, msecs_to_jiffies(1000));
+	schedule_delayed_work(&dev->stat_work, 0);
 
 	dev->active = true;
 	return 0;
@@ -784,7 +784,7 @@ static void si2157_stat_work(struct work_struct *work)
 	c->strength.stat[0].scale = FE_SCALE_DECIBEL;
 	c->strength.stat[0].svalue = (s8) cmd.args[3] * 1000;
 
-	schedule_delayed_work(&dev->stat_work, msecs_to_jiffies(2000));
+	schedule_delayed_work(&dev->stat_work, HZ / 2);
 	return;
 err:
 	c->strength.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
