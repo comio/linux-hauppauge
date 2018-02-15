@@ -421,20 +421,34 @@ static int cx23885_risc_decode(u32 risc)
 static void cx23885_wakeup(struct cx23885_tsport *port,
 			   struct cx23885_dmaqueue *q, u32 count)
 {
+	struct cx23885_dev *dev = port->dev;
 	struct cx23885_buffer *buf;
+	int16_t count_delta;
+	int max_buf_done = 5;
+	do {
+		if (list_empty(&q->active))
+			return;
+		buf = list_entry(q->active.next,
+				 struct cx23885_buffer, queue);
 
-	if (list_empty(&q->active))
-		return;
-	buf = list_entry(q->active.next,
-			 struct cx23885_buffer, queue);
-
-	buf->vb.vb2_buf.timestamp = ktime_get_ns();
-	buf->vb.sequence = q->count++;
-	dprintk(1, "[%p/%d] wakeup reg=%d buf=%d\n", buf,
-		buf->vb.vb2_buf.index,
-		count, q->count);
-	list_del(&buf->queue);
-	vb2_buffer_done(&buf->vb.vb2_buf, VB2_BUF_STATE_DONE);
+		buf->vb.vb2_buf.timestamp = ktime_get_ns();
+		buf->vb.sequence = q->count++;
+		if (count != q->count) {
+			dprintk(0, "[%p/%d] wakeup reg=%d buf=%d\n", buf,
+				buf->vb.vb2_buf.index,
+				count, q->count);
+		} else {
+			dprintk(1, "[%p/%d] wakeup reg=%d buf=%d\n", buf,
+				buf->vb.vb2_buf.index,
+				count, q->count);
+		}
+		list_del(&buf->queue);
+		vb2_buffer_done(&buf->vb.vb2_buf, VB2_BUF_STATE_DONE);
+		max_buf_done--;
+		/* count register is only 16 bits so truncate things
+		   appropriately */
+		count_delta = (int16_t)(count - q->count);
+	} while ((count_delta > 0) && (max_buf_done > 0));
 }
 
 int cx23885_sram_channel_setup(struct cx23885_dev *dev,
