@@ -438,6 +438,8 @@ static int si2168_set_frontend(struct dvb_frontend *fe)
 	}
 
 	memcpy(cmd.args, "\x14\x00\x0f\x10\x10\x00", 6);
+	/* BUGBUG? FW defaults to 1, but windows driver uses 30; above is 0? */
+	cmd.args[5] = 30;
 	cmd.wlen = 6;
 	cmd.rlen = 4;
 	ret = si2168_cmd_execute(client, &cmd);
