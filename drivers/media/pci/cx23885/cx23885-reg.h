@@ -288,6 +288,16 @@ Channel manager Data Structure entry = 20 DWORD
 #define AUDIO_EXT_INT_MSTAT	0x00040068
 #define AUDIO_EXT_INT_SSTAT	0x0004006C
 
+/* Undocumented registers when set to 1
+ * cause the 885 bridge (unknown about the other bridges)
+ * to become inoperable.
+ * These act as status flags and clearing
+ * them allow operation to continue.
+ * They are cleared by writing their
+ * contents back to them, like clearing interrupts */
+#define UNKNOWN_ERROR_REG_1	0x00040090
+#define UNKNOWN_ERROR_REG_2	0x00040094
+
 #define RDR_CFG0	0x00050000
 #define RDR_CFG1	0x00050004
 #define RDR_CFG2	0x00050008
@@ -386,6 +396,8 @@ Channel manager Data Structure entry = 20 DWORD
 #define VID_B_PIXEL_FRMT	0x00130184
 
 /* Video C Interface */
+#define VID_C_DMA		0x00130200
+#define VBI_C_DMA		0x00130208
 #define VID_C_GPCNT		0x00130220
 #define VID_C_GPCNT_CTL		0x00130230
 #define VBI_C_GPCNT_CTL		0x00130234
